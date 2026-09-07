@@ -1,0 +1,4 @@
+# dsh-orbit bundle patch：把 orbit 插件插入 profile 插件树。
+- insert:
+    - id: dsh-orbit
+      name: dsh-orbit
