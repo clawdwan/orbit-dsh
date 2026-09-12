@@ -1,6 +1,6 @@
 {
   "name": "dsh-orbit",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Orbit — a reflection layer for DSH: hypothesis→task→result rings with objective done_when, rolling review, track-scoped playbooks, and weekly distillation with review gate.",
   "type": "module",
   "main": "lib/index.js",
@@ -21,8 +21,14 @@
     "@deepseek-ai/dsh-storage-json": "^0.1.2-rc.1 || ^0.1.5-rc.1"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-tools": { "optional": false },
-    "@deepseek-ai/dsh-storage-domain": { "optional": false },
-    "@deepseek-ai/dsh-user-questions": { "optional": false }
+    "@deepseek-ai/dsh-tools": {
+      "optional": false
+    },
+    "@deepseek-ai/dsh-storage-domain": {
+      "optional": false
+    },
+    "@deepseek-ai/dsh-user-questions": {
+      "optional": false
+    }
   }
 }

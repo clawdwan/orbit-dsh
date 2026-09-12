@@ -13,8 +13,22 @@
 | 2.0.0 | 流程纪律线 | review 拆两道(clean by:agent / apply by:user) / 残留提醒 / 增量蒸馏 / prompt 收口纪律 / reflect 收口检查站 |
 | 2.1.0 | 可度量 | 双轨度量(注入打点 + 采纳报告) / 案例摘要 / playbook 统计显示 |
 | 2.2.0 | 可检验 | 健康度(采纳环成功率) / orbit_health(建议淘汰 + 冲突对) / 写入时冲突检测 / review outdate |
+| 2.3.0 | embedding 注入匹配 | 注入按任务相关性排序(embedding 余弦) / 阈值过滤(宁缺毋滥) / 注入分数记录 / 采纳指令+id 标注 / scope 最小化 |
+| 2.3.1 | dsh 0.1.5 适配 | peer 范围放宽兼容 dsh 0.1.5 / approval 开放录入修复 / 周期蒸馏改由 dsh-schedule 驱动 |
 
-## 2. 工具面(9 个)
+### 2.3.0 详情
+- **注入相关性**:建环注入经验按「与当前任务的相关性」(embedding 余弦)排序取 top3,替代顺序取3(实测相关分 0.520 vs 0.428)
+- **阈值过滤**:`embedMinScore`(默认 0.35),低于阈值不注入(宁缺毋滥);ring 记录 `injected_scores`
+- **采纳引导**:注入经验带 `[exp_id]` 标注 + 指令引导 agent 报告采纳
+- **配置**:`embedProvider`(off/ollama/openai)、`embedUrl`、`embedModel`、`embedApiKey`、`embedTimeoutMs`;默认 off(行为不变)
+- **scope 最小化**:蒸馏候选一律 global(track 承担世界隔离),session 仅手动指定
+
+### 2.3.1 详情
+- **dsh 0.1.5 适配**:peer 依赖放宽为 `^0.1.2-rc.1 || ^0.1.5-rc.1`
+- **fix(approval)**:askApproval 读取开放录入文本并回显给 agent
+- **周期蒸馏机制**:移除 ctx.interval 定时(重启即重置不可靠);新增 `orbit_weekly_distill` 工具(蒸馏全部 track + 产出>0 自动推送通知),供 dsh-schedule 每周唤醒调用
+
+## 2. 工具面(10 个)
 
 | 工具 | 用途 |
 |---|---|
@@ -24,6 +38,7 @@
 | `orbit_reflect` | 外环复盘 + 收口检查站(未收口环 / 未纠偏环 / 重复复盘三检查) |
 | `orbit_experience_add` | 手动沉淀成品经验(重复检测 + evidence 存在性校验 + 冲突提示 + 确认卡过门) |
 | `orbit_distill` | 蒸馏候选(增量 / full 全量 / backfill 回填案例摘要) |
+| `orbit_weekly_distill` | 周期蒸馏(供 dsh-schedule 每周唤醒调用):蒸馏全部 track,产出>0 自动推送通知 |
 | `orbit_playbook` | 读 playbook(统计 + 健康度 + 案例摘要) |
 | `orbit_health` | 健康度报告(建议淘汰 + 冲突对,LLM 全量扫描,best-effort) |
 | `orbit_review` | review 过门:list / clean(agent) / apply(user,收后自动冲突检测,modify 支持 scope_kind) / outdate(active→outdated) |
