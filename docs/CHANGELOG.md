@@ -1,6 +1,6 @@
 # Orbit CHANGELOG(版本与功能记录)
 
-> 更新: 2026-09-02
+> 更新: 2026-10-12
 > 本文件是公开的版本与功能记录(面向使用者/维护者);设计演进与路线图见本地 .internal/。
 
 ---
@@ -15,6 +15,7 @@
 | 2.2.0 | 可检验 | 健康度(采纳环成功率) / orbit_health(建议淘汰 + 冲突对) / 写入时冲突检测 / review outdate |
 | 2.3.0 | embedding 注入匹配 | 注入按任务相关性排序(embedding 余弦) / 阈值过滤(宁缺毋滥) / 注入分数记录 / 采纳指令+id 标注 / scope 最小化 |
 | 2.3.1 | dsh 0.1.5 适配 | peer 范围放宽兼容 dsh 0.1.5 / approval 开放录入修复 / 周期蒸馏改由 dsh-schedule 驱动 |
+| 2.3.2 | dsh 0.2 适配 | peer 范围扩到 0.2 家族 / 补声明此前漏掉的 dsh-llm / 与 dsh 0.2 插件版本闸门对齐 |
 
 ### 2.3.0 详情
 - **注入相关性**:建环注入经验按「与当前任务的相关性」(embedding 余弦)排序取 top3,替代顺序取3(实测相关分 0.520 vs 0.428)
@@ -27,6 +28,11 @@
 - **dsh 0.1.5 适配**:peer 依赖放宽为 `^0.1.2-rc.1 || ^0.1.5-rc.1`
 - **fix(approval)**:askApproval 读取开放录入文本并回显给 agent
 - **周期蒸馏机制**:移除 ctx.interval 定时(重启即重置不可靠);新增 `orbit_weekly_distill` 工具(蒸馏全部 track + 产出>0 自动推送通知),供 dsh-schedule 每周唤醒调用
+
+### 2.3.2 详情
+- **dsh 0.2 适配**:peer 范围放宽为 `^0.1.2-rc.1 || ^0.1.5-rc.1 || ^0.2.0-rc.2`(dsh 0.2 起有插件版本闸门:声明范围不含运行时版本会被禁用;闸门用 `includePrerelease` 语义判定,故 0.2 家族一条即可覆盖 0.2.1-alpha 等)
+- **补声明**:新增 `@deepseek-ai/dsh-llm` peer(`lib/index.js` 值导入 `BlockAssembler`/`createUserMessage`,此前漏声明、只能靠宿主 fallback 兜底)
+- **验证**:按闸门同款语义实测 6 个 dsh peer 在 `0.2.0-rc.2` 上全部满足;`orbit_health` 经飞书端到端跑通
 
 ## 2. 工具面(10 个)
 
