@@ -490,6 +490,62 @@ test("I6 review:outdate → active 标记 outdated + user_outdated", async () =>
   assert.equal(e.note, "user_outdated");
 });
 
+test("I8 review:apply merge → active 应用修改(统计保留) + 候选 rejected 留痕", async () => {
+  const env = await freshEnv();
+  await putPb(env, "config", [
+    makeExp("exp_cand", { status: "pending", experience: "候选经验", action: "候选做法" }),
+    makeExp("exp_target", { action: "旧做法", injected_count: 7, adopted_count: 3 }),
+  ]);
+  const r = await env.run("orbit_review", {
+    track: "config", action: "apply",
+    decisions: JSON.stringify([{ id: "exp_cand", decision: "merge", into: "exp_target", modified: { action: "合并后的做法" } }]),
+  });
+  assert.equal(r.ok, true);
+  assert.match(r.message, /并 1/);
+  const entries = env.domain().table("playbooks").get("config").entries;
+  const t = entries.find((e) => e.id === "exp_target");
+  const c = entries.find((e) => e.id === "exp_cand");
+  assert.equal(t.action, "合并后的做法", "active 应用了修改");
+  assert.equal(t.injected_count, 7, "统计保留");
+  assert.equal(t.adopted_count, 3, "统计保留");
+  assert.equal(t.version, 2, "version+1");
+  assert.equal(t.status, "active");
+  assert.equal(c.status, "rejected");
+  assert.equal(c.note, "merged_into:exp_target");
+});
+
+test("I9 review:apply supersede → 候选转 active + 旧条目 outdated 留痕", async () => {
+  const env = await freshEnv();
+  await putPb(env, "config", [
+    makeExp("exp_cand", { status: "pending", experience: "新版经验" }),
+    makeExp("exp_old", { experience: "旧版经验" }),
+  ]);
+  const r = await env.run("orbit_review", {
+    track: "config", action: "apply",
+    decisions: JSON.stringify([{ id: "exp_cand", decision: "supersede", old_id: "exp_old" }]),
+  });
+  assert.equal(r.ok, true);
+  assert.match(r.message, /替 1/);
+  const entries = env.domain().table("playbooks").get("config").entries;
+  assert.equal(entries.find((e) => e.id === "exp_cand").status, "active");
+  const old = entries.find((e) => e.id === "exp_old");
+  assert.equal(old.status, "outdated");
+  assert.equal(old.note, "superseded_by:exp_cand");
+});
+
+test("I10 review:apply merge 目标不存在 → 跳过并提示", async () => {
+  const env = await freshEnv();
+  await putPb(env, "config", [makeExp("exp_cand", { status: "pending" })]);
+  const r = await env.run("orbit_review", {
+    track: "config", action: "apply",
+    decisions: JSON.stringify([{ id: "exp_cand", decision: "merge", into: "exp_missing", modified: { action: "x" } }]),
+  });
+  assert.equal(r.ok, true);
+  assert.match(r.message, /跳过 1 条/);
+  assert.match(r.message, /exp_missing/);
+  assert.equal(env.domain().table("playbooks").get("config").entries[0].status, "pending", "候选保持 pending");
+});
+
 test("I7 review:apply 后冲突检测(假 LLM 返回冲突)→ 返回含冲突提示", async () => {
   const env = await freshEnv({
     llmResponses: [JSON.stringify([{ index: 0, reason: "与已有经验矛盾" }])],
