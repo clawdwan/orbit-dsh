@@ -595,6 +595,87 @@ test("J4 embedding 阈值:全部低于阈值 → 0 条注入(宁缺毋滥)", asy
   }
 });
 
+// ---------- K. 语义查重（v2.3.2） ----------
+
+/** mock fetch：按调用顺序返回预设向量块（查重会分「active 批量」「候选」两次调用）。 */
+function mockFetchEmbedSeq(chunks) {
+  const realFetch = globalThis.fetch;
+  let i = 0;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes("/api/embed")) {
+      const chunk = chunks[Math.min(i, chunks.length - 1)];
+      i++;
+      return { ok: true, json: async () => ({ embeddings: chunk }) };
+    }
+    throw new Error(`mock fetch 未覆盖: ${url}`);
+  };
+  return () => { globalThis.fetch = realFetch; };
+}
+
+test("K1 语义查重:embedding 命中强重复(≥0.9)标 strong", async () => {
+  // 调用序:active 批量([1,0,0]) → 候选 exp([1,0.1,0],余弦≈0.995) → action 对(相同→actionScore≈1)
+  const restore = mockFetchEmbedSeq([[[1, 0, 0]], [[1, 0.1, 0]], [[1, 0, 0], [1, 0, 0]]]);
+  try {
+    const env = await freshEnv({ config: { embedProvider: "ollama", embedUrl: "http://mock", embedModel: "m", embedTimeoutMs: 1000 } });
+    await putPb(env, "config", [makeExp("exp_1", { experience: "组件骨架搭建时需验证引用方可运行", action: "做法A" })]);
+    const pb = await env.domain().table("playbooks").get("config");
+    const dup = await env.inst.findDuplicateSemantic(pb, { experience: "组件骨架搭建时需验证引用方可运行", action: "做法A" });
+    assert.ok(dup, "应命中重复");
+    assert.equal(dup.level, "strong");
+    assert.equal(dup.method, "embedding");
+    assert.equal(dup.entry.id, "exp_1");
+    assert.ok(dup.actionScore > 0.9, "action 相同 → actionScore 应高");
+  } finally {
+    restore();
+  }
+});
+
+test("K2 语义查重:相似度不足阈值(0.85)不判重复", async () => {
+  const restore = mockFetchEmbedSeq([[[1, 0, 0]], [[0, 1, 0]]]); // 正交 → 余弦 0
+  try {
+    const env = await freshEnv({ config: { embedProvider: "ollama", embedUrl: "http://mock", embedModel: "m", embedTimeoutMs: 1000 } });
+    await putPb(env, "config", [makeExp("exp_1", { experience: "经验甲" })]);
+    const pb = await env.domain().table("playbooks").get("config");
+    const dup = await env.inst.findDuplicateSemantic(pb, { experience: "完全不同的经验乙", action: "a" });
+    assert.equal(dup, null, "低相似不应判重复");
+  } finally {
+    restore();
+  }
+});
+
+test("K4 语义查重:experience 相同但 action 不同 → 仍判 strong(判定只用 experience)", async () => {
+  // 调用序:active exp([1,0,0]) → 候选 exp([1,0.05,0]≈0.999) → action 对(正交,actionScore≈0)
+  const restore = mockFetchEmbedSeq([[[1, 0, 0]], [[1, 0.05, 0]], [[0, 1, 0], [1, 0, 0]]]);
+  try {
+    const env = await freshEnv({ config: { embedProvider: "ollama", embedUrl: "http://mock", embedModel: "m", embedTimeoutMs: 1000 } });
+    await putPb(env, "config", [makeExp("exp_1", { experience: "盘点与实施必须严格分离", action: "迁移场景:先出确认清单+git diff 基线" })]);
+    const pb = await env.domain().table("playbooks").get("config");
+    const dup = await env.inst.findDuplicateSemantic(pb, { experience: "盘点与实施必须严格分离", action: "体检场景:只读盘点,改动前逐项确认" });
+    assert.ok(dup, "应命中重复");
+    assert.equal(dup.level, "strong", "experience 相同即 strong,不被 action 差异拉低");
+    assert.ok(dup.actionScore < 0.5, "action 相似度应低 → 提示同经验不同做法");
+  } finally {
+    restore();
+  }
+});
+
+test("K3 语义查重:embedding 失败回退 bigram(level=suspect, method=bigram)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error("network down"); };
+  try {
+    const env = await freshEnv({ config: { embedProvider: "ollama", embedUrl: "http://mock", embedModel: "m", embedTimeoutMs: 1000 } });
+    const text = "组件骨架搭建时若假设源码先写文件后引用可行必须验证引用方可运行";
+    await putPb(env, "config", [makeExp("exp_1", { experience: text })]);
+    const pb = await env.domain().table("playbooks").get("config");
+    const dup = await env.inst.findDuplicateSemantic(pb, { experience: text, action: "a" });
+    assert.ok(dup, "bigram 应对几乎相同文本命中");
+    assert.equal(dup.method, "bigram");
+    assert.equal(dup.level, "suspect");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 // ------------------------------------------------------------
 // runner
 // ------------------------------------------------------------

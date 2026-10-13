@@ -28,7 +28,7 @@ try {
   // 1. Import domain.js — runs defineDomain + zod schema compile at load (fail-loud risk).
   const d = await import(DOMAIN);
   if (!d.orbitDomain || d.orbitDomain.name !== "orbit") throw new Error("orbitDomain 异常");
-  if (d.orbitDomain.version !== 6) throw new Error(`版本应为 6，实际 ${d.orbitDomain.version}`);
+  if (d.orbitDomain.version !== 7) throw new Error(`版本应为 7，实际 ${d.orbitDomain.version}`);
   if (!d.experienceEntrySchema) throw new Error("experienceEntrySchema 未导出");
   if (d.normalizeTrack("Analysis") !== "analysis") throw new Error("normalizeTrack 异常");
   if (d.normalizeTrack("bogus") !== "other") throw new Error("normalizeTrack 回退异常");
@@ -47,7 +47,7 @@ try {
   // 3. 流程纪律回归守卫：prompt 收口纪律段 + reflect 收口检查站（防未来误删关键规则）。
   const fs = await import("node:fs");
   const src = fs.readFileSync(DEPLOYED, "utf8");
-  for (const phrase of ["收口纪律", "update_goal complete 之前", "orbit_ring_close", "收口检查", "疑似重复", "via_experience_add", "adopted_experiences", "injected_count", "backfillCaseSummaries", "case_summary", "orbit_health", "outdate", "采纳环成功率", "冲突提示", "embedTexts", "embedProvider", "embedMinScore", "orbit_weekly_distill"]) {
+  for (const phrase of ["收口纪律", "update_goal complete 之前", "orbit_ring_close", "收口检查", "疑似重复", "via_experience_add", "adopted_experiences", "injected_count", "backfillCaseSummaries", "case_summary", "orbit_health", "outdate", "采纳环成功率", "冲突提示", "embedTexts", "embedProvider", "embedMinScore", "orbit_weekly_distill", "duplicate_of", "findDuplicateSemantic", "DUP_STRONG"]) {
     if (!src.includes(phrase)) throw new Error(`部署副本缺少流程纪律关键短语: ${phrase}`);
   }
 

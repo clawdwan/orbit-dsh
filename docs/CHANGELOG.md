@@ -17,6 +17,16 @@
 | 2.3.1 | dsh 0.1.5 适配 | peer 范围放宽兼容 dsh 0.1.5 / approval 开放录入修复 / 周期蒸馏改由 dsh-schedule 驱动 |
 | 2.3.2 | dsh 0.2 适配 | peer 范围扩到 0.2 家族 / 补声明此前漏掉的 dsh-llm / 与 dsh 0.2 插件版本闸门对齐 |
 | 2.3.3 | 声明收敛 | dsh peer 由"逐家族枚举"改为时代范围 `>=0.1.2-rc.1 <0.3.0-0`(0.1.x/0.2.x 整代一条覆盖,0.3 才触发闸门) |
+| 2.3.4 | 语义查重 | embedding 语义查重(≥0.9 强重复 / 0.85-0.9 疑似)+ 判定只用 experience + 三处重复标记(domain v7:duplicate_of) |
+
+### 2.3.4 详情
+- **语义查重**(知识进化线阶段2):`findDuplicateSemantic` 用 embedding 余弦替代 bigram 字符粗筛——
+  - 分级阈值:**≥0.9 strong**(措辞级重复)/ **0.85-0.9 suspect**(疑似);0.6-0.75 是同主题不同侧面,**不判重复**(避免误杀经验族)
+  - `embedProvider=off` 或调用失败 → 回退 bigram,不阻塞
+  - active 向量按(id+文本)缓存,经验文本未变则复用
+- **判定口径:只用 `experience`**:同一经验在不同场景会产生不同 action,把 action 混入会把「experience 一字不差(0.998)」压到 0.897 造成漏判;命中后另算 `actionScore` 作辅助信号(区分「完全重复」vs「同经验不同做法」)
+- **三处标记落点**:`orbit_experience_add` 确认卡(显示级别/分数/做法差异)、蒸馏候选写入 `duplicate_of`、`formatExperience` 显示 ⚠️ 标记
+- **domain v7**:经验新增 `duplicate_of`(id/score/level/method,nullable default null);存储格式升级由 DSH 自动迁移并备份
 
 ### 2.3.0 详情
 - **注入相关性**:建环注入经验按「与当前任务的相关性」(embedding 余弦)排序取 top3,替代顺序取3(实测相关分 0.520 vs 0.428)

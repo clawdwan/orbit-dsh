@@ -1,6 +1,6 @@
 {
   "name": "dsh-orbit",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "description": "Orbit — a reflection layer for DSH: hypothesis→task→result rings with objective done_when, rolling review, track-scoped playbooks, and weekly distillation with review gate.",
   "type": "module",
   "main": "lib/index.js",
