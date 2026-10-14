@@ -18,6 +18,15 @@
 | 2.3.2 | dsh 0.2 适配 | peer 范围扩到 0.2 家族 / 补声明此前漏掉的 dsh-llm / 与 dsh 0.2 插件版本闸门对齐 |
 | 2.3.3 | 声明收敛 | dsh peer 由"逐家族枚举"改为时代范围 `>=0.1.2-rc.1 <0.3.0-0`(0.1.x/0.2.x 整代一条覆盖,0.3 才触发闸门) |
 | 2.3.4 | 语义查重 | embedding 语义查重(≥0.9 强重复 / 0.85-0.9 疑似)+ 判定只用 experience + 三处重复标记(domain v7:duplicate_of) |
+| 2.3.5 | 处置闭环 | review apply 新增 merge(候选并入 active,保留统计)+ supersede(新替旧留痕);目标校验失败跳过并提示 |
+
+### 2.3.5 详情
+- **`merge`**:`{id:候选, decision:"merge", into:"exp_active", modified:{experience/action/invalidates_when/scope_kind}}` ——
+  候选内容并入已有 active 经验(**保留其 id 与展示/采纳统计**,`version+1`),候选本身标 `rejected` + note `merged_into:<activeId>`
+- **`supersede`**:`{id:候选, decision:"supersede", old_id:"exp_old"}` —— 候选转 active,被替代的旧条目标 `outdated` + note `superseded_by:<候选id>`(留痕可查)
+- **目标校验**:merge 的 `into` / supersede 的 `old_id` 必须存在且为 active,否则**跳过并提示**(候选保持 pending 可重新裁决)
+- 返回消息含五项计数:收 / 拒 / 改 / **并** / **替**
+- `formatExperience` 显示 `merged_into:` / `superseded_by:` 留痕
 
 ### 2.3.4 详情
 - **语义查重**(知识进化线阶段2):`findDuplicateSemantic` 用 embedding 余弦替代 bigram 字符粗筛——
